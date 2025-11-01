@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UNO - Ma Nhai Edition</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="header">
+    <h1>MA NHAI <span id="meme-fact"></span></h1>
+  </div>
+
+  <div id="lobby" class="screen">
+    <div class="card">
+      <h2>UNO Ma Nhai</h2>
+      <input type="text" id="username" placeholder="Tên của bạn" />
+      <div class="input-group">
+        <input type="text" id="roomCode" placeholder="Mã phòng (VD: ABC123) - Để trống để tự sinh" />
+        <button id="createRoom">Tạo Phòng</button>
+        <button id="joinRoom">Tham Gia</button>
+      </div>
+      <p id="errorMsg" class="error"></p>
+    </div>
+  </div>
+
+  <div id="room" class="screen hidden">
+    <div class="sidebar">
+      <h3>Người chơi</h3>
+      <ul id="playerList"></ul>
+      <div class="room-info">
+        <p><strong>Mã phòng:</strong> <span id="displayRoomCode"></span></p>
+        <p>Chia sẻ mã này để bạn bè tham gia!</p>
+      </div>
+      <button id="startGame" class="btn-primary hidden">Bắt đầu</button>
+    </div>
+
+    <div class="game-area">
+      <div id="gameBoard" class="hidden">
+        <!-- HIỂN THỊ LƯỢT -->
+        <div id="currentTurn" class="turn-indicator hidden"></div>
+        
+        <div class="deck-area">
+          <div id="discardPile"></div>
+          <button id="drawButton" class="btn-draw hidden">RÚT BÀI</button>
+        </div>
+        
+        <div id="playerHand"></div>
+      </div>
+
+      <div id="chatBox">
+        <div id="chatMessages"></div>
+        <div class="chat-input">
+          <input type="text" id="chatInput" placeholder="Nhắn tin..." />
+          <button id="sendChat">Gửi</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="colorPicker" class="modal hidden">
+    <div class="modal-content">
+      <h3>Chọn màu</h3>
+      <div class="colors">
+        <div class="color red" data-color="red"></div>
+        <div class="color green" data-color="green"></div>
+        <div class="color blue" data-color="blue"></div>
+        <div class="color yellow" data-color="yellow"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
