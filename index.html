@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>UNO - Ma Nhai Edition</title>
+  <title>🎃 Ma Nhai Game 🎃</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="header">
-    <h1>MA NHAI <span id="meme-fact"></span></h1>
+    <h1>🎃 MA NHAI 🎃 <span id="meme-fact"></span></h1>
   </div>
 
   <div id="lobby" class="screen">
@@ -16,9 +16,13 @@
       <h2>UNO Ma Nhai</h2>
       <input type="text" id="username" placeholder="Tên của bạn" />
       <div class="input-group">
-        <input type="text" id="roomCode" placeholder="Mã phòng (VD: ABC123) - Để trống để tự sinh" />
-        <button id="createRoom">Tạo Phòng</button>
-        <button id="joinRoom">Tham Gia</button>
+          <input type="text" id="roomCode" placeholder="Mã phòng" />
+          <button id="createRoom">Tạo Phòng</button>
+          <button id="joinRoom">Tham Gia</button>
+        </div>
+
+        <a href="how.html" class="btn-how-to-play">Cách chơi & Thông Tin</a>
+        <p id="errorMsg" class="error"></p>
       </div>
       <p id="errorMsg" class="error"></p>
     </div>
@@ -29,17 +33,26 @@
       <h3>Người chơi</h3>
       <ul id="playerList"></ul>
       <div class="room-info">
-        <p><strong>Mã phòng:</strong> <span id="displayRoomCode"></span></p>
+        <p><strong>🚪 Mã phòng:</strong> <span id="displayRoomCode"></span></p>
         <p>Chia sẻ mã này để bạn bè tham gia!</p>
       </div>
-      <button id="startGame" class="btn-primary hidden">Bắt đầu</button>
+      <button id="startGame" class="btn-primary hidden">Bắt đầu 🚀</button>
+
+      <div class="room-info hidden" id="gameTimerContainer">
+        <p style="margin: 0; font-size: 0.9rem; color: #ccc;">Thời gian chơi:</p>
+        <span id="gameElapsedTime" style="font-size: 1.5rem; font-weight: bold; letter-spacing: 2px;">00:00</span>
+      </div>
     </div>
 
     <div class="game-area">
       <div id="gameBoard" class="hidden">
         <!-- HIỂN THỊ LƯỢT -->
         <div id="currentTurn" class="turn-indicator hidden"></div>
-        
+
+        <div id="turnTimer" class="turn-timer hidden">
+          <div id="timerBar" class="timer-bar"></div>
+          <span id="timerText">30</span>
+        </div>
         <div class="deck-area">
           <div id="discardPile"></div>
           <button id="drawButton" class="btn-draw hidden">RÚT BÀI</button>
@@ -52,7 +65,7 @@
         <div id="chatMessages"></div>
         <div class="chat-input">
           <input type="text" id="chatInput" placeholder="Nhắn tin..." />
-          <button id="sendChat">Gửi</button>
+          <button id="sendChat">📤</button>
         </div>
       </div>
     </div>
@@ -70,6 +83,19 @@
     </div>
   </div>
 
+  <div id="gameOverModal" class="modal hidden">
+  <div class="modal-content results-modal">
+    <h2>Kết quả "Ma Nhai"</h2>
+
+    <div id="resultsList">
+      </div>
+
+    <button id="closeResultsButton" class="btn-primary" style="width: 100%; margin-top: 15px;">
+      Chơi lại
+    </button>
+  </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>

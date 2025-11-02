@@ -1,4 +1,14 @@
+// === BIẾN GLOBAL & TRẠNG THÁI ===
 const socket = io();
+let myCards = [];
+let visualTimerInterval = null;
+let gameTimerInterval = null;
+let currentHostId = null;
+let currentTopCard = null;
+let roomCode = '';
+let isHost = false;
+let currentTurnId = null;
+
 const memeFacts = [
     "Ma nhai không ngủ, chỉ giả chết!",
     "Ma nhai thích ăn... não người chơi Uno!",
@@ -12,12 +22,7 @@ const memeFacts = [
     "Ma nhai thắng khi bạn hô UNO muộn!"
 ];
 
-let myCards = [];
-let roomCode = '';
-let isHost = false;
-let currentTurnId = null;
-
-// DOM Elements
+// === DOM ELEMENTS ===
 const elements = {
     lobby: document.getElementById('lobby'),
     room: document.getElementById('room'),
@@ -34,16 +39,34 @@ const elements = {
     chatInput: document.getElementById('chatInput'),
     sendChat: document.getElementById('sendChat'),
     colorPicker: document.getElementById('colorPicker'),
-    drawButton: document.getElementById('drawButton')
+    drawButton: document.getElementById('drawButton'),
+    turnTimer: document.getElementById('turnTimer'),
+    timerText: document.getElementById('timerText'),
+    timerBar: document.getElementById('timerBar'),
+    gameTimerContainer: document.getElementById('gameTimerContainer'),
+    gameElapsedTime: document.getElementById('gameElapsedTime'),
+    gameOverModal: document.getElementById('gameOverModal'),
+    resultsList: document.getElementById('resultsList'),
+    closeResultsButton: document.getElementById('closeResultsButton')
 };
 
-// EVENT LISTENERS
-document.getElementById('createRoom').onclick = () => createOrJoinRoom(true);
-document.getElementById('joinRoom').onclick = () => createOrJoinRoom(false);
-elements.startGame.onclick = () => socket.emit('startGame');
-elements.drawButton.onclick = () => socket.emit('drawCard');
-elements.sendChat.onclick = sendChat;
-elements.chatInput.addEventListener('keypress', e => e.key === 'Enter' && sendChat());
+// === KHỞI TẠO ÂM THANH ===
+const sounds = {
+    play: new Audio('/audio/play.mp3'),
+    draw: new Audio('/audio/draw.mp3'),
+    shuffle: new Audio('/audio/shuffle.mp3'),
+    win: new Audio('/audio/win.mp3'),
+    error: new Audio('/audio/error.mp3')
+};
+
+function playSound(sound) {
+    if (sounds[sound]) {
+        sounds[sound].currentTime = 0;
+        sounds[sound].play().catch(e => console.log("Audio play bị chặn:", e));
+    }
+}
+
+// === CÁC HÀM LOGIC CHÍNH ===
 
 function createOrJoinRoom(isCreate) {
     const username = document.getElementById('username').value.trim();
@@ -55,21 +78,7 @@ function createOrJoinRoom(isCreate) {
     const roomCode = isCreate ? (code || generateRoomCode()) : code;
     socket.emit(isCreate ? 'createRoom' : 'joinRoom', roomCode, username);
 }
-// === BỘ XỬ LÝ TRẠNG THÁI GAME MỚI (MỘT NƠI DUY NHẤT) ===
-function handleGameStateUpdate(data) {
-    // 1. Cập nhật lá bài trên cùng
-    if (data.discardTop) {
-        renderDiscardTop(data.discardTop);
-    }
 
-    // 2. Cập nhật chỉ báo lượt
-    currentTurnId = data.currentTurn;
-    const currentPlayer = data.players.find(p => p.id === data.currentTurn);
-    updateTurnIndicator(currentPlayer?.name || '???');
-
-    // 3. (Tùy chọn) Cập nhật số lượng bài của người chơi khác
-    // Bạn có thể thêm code ở đây để hiển thị số bài của đối thủ
-}
 function sendChat() {
     const msg = elements.chatInput.value.trim();
     if (msg) {
@@ -78,7 +87,79 @@ function sendChat() {
     }
 }
 
-// SOCKET EVENTS
+function startElapsedTimeTimer() {
+    elements.gameTimerContainer.classList.remove('hidden');
+    let totalSeconds = 0;
+    elements.gameElapsedTime.textContent = '00:00'; 
+    
+    // Xóa timer cũ nếu có để tránh chạy song song
+    if (gameTimerInterval) clearInterval(gameTimerInterval);
+
+    gameTimerInterval = setInterval(() => {
+        totalSeconds++;
+        let minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        let seconds = (totalSeconds % 60).toString().padStart(2, '0');
+        elements.gameElapsedTime.textContent = `${minutes}:${seconds}`;
+    }, 1000);
+}
+
+function startVisualTimer(seconds) {
+    if (visualTimerInterval) {
+        clearInterval(visualTimerInterval);
+    }
+
+    let remaining = seconds;
+    elements.timerText.textContent = remaining;
+    elements.timerBar.classList.remove('timer-low');
+    elements.timerBar.style.width = '100%';
+
+    visualTimerInterval = setInterval(() => {
+        remaining--;
+        elements.timerText.textContent = remaining;
+        elements.timerBar.style.width = (remaining / seconds) * 100 + '%';
+
+        if (remaining <= 10) {
+            elements.timerBar.classList.add('timer-low');
+        }
+
+        if (remaining <= 0) {
+            clearInterval(visualTimerInterval);
+        }
+    }, 1000);
+}
+
+// Xử lý trung tâm cho mọi cập nhật trạng thái game
+function handleGameStateUpdate(data) {
+    // 1. Cập nhật lá bài trên cùng
+    if (data.discardTop) {
+        renderDiscardTop(data.discardTop);
+        currentTopCard = data.discardTop; // Lưu lại lá bài
+    }
+
+    // 2. Cập nhật chỉ báo lượt
+    currentTurnId = data.currentTurn;
+    const currentPlayer = data.players.find(p => p.id === data.currentTurn);
+    updateTurnIndicator(currentPlayer?.name || '???');
+
+    // 3. Cập nhật đồng hồ đếm ngược
+    if (visualTimerInterval) {
+        clearInterval(visualTimerInterval); // Dừng mọi đồng hồ cũ
+    }
+
+    if (currentTurnId === socket.id) {
+        // Là lượt của tôi
+        elements.playerHand.classList.remove('hand-disabled');
+        elements.turnTimer.classList.remove('hidden');
+        startVisualTimer(30); // Bắt đầu đếm 30 giây
+    } else {
+        // Không phải lượt của tôi
+        elements.playerHand.classList.add('hand-disabled');
+        elements.turnTimer.classList.add('hidden');
+    }
+}
+
+// === SOCKET EVENT HANDLERS ===
+
 socket.on('roomJoined', (data) => {
     roomCode = data.roomCode;
     isHost = data.isHost;
@@ -89,13 +170,19 @@ socket.on('roomJoined', (data) => {
     elements.startGame.classList.toggle('hidden', !isHost);
 });
 
+// TỐI ƯU: Đã chuyển playSound('error') vào hàm showError
+socket.on('errorMessage', showError); 
 
-socket.on('errorMessage', showError);
+socket.on('updatePlayers', (players, hostId) => {
+    currentHostId = hostId; // Lưu lại ai là host
+    elements.playerList.innerHTML = players.map(p => {
+        let hostTag = (p.id === currentHostId) ? ' 👑' : ''; // Emoji vương miện
+        let youTag = (p.id === socket.id) ? ' (Bạn)' : '';
+        let liClass = (p.id === socket.id) ? 'player-you' : '';
+        if (p.id === currentHostId) liClass += ' player-host';
 
-socket.on('updatePlayers', (players) => {
-    elements.playerList.innerHTML = players.map(p => 
-        `<li ${p.id === socket.id ? 'class="host"' : ''}>${p.name} ${p.id === socket.id ? '(Bạn)' : ''}</li>`
-    ).join('');
+        return `<li class="${liClass}">${p.name}${youTag}${hostTag}</li>`;
+    }).join('');
 });
 
 socket.on('becomeHost', () => {
@@ -103,14 +190,17 @@ socket.on('becomeHost', () => {
     elements.startGame.classList.remove('hidden');
 });
 
-// Lắng nghe sự kiện 'updateGameState' MỚI (thay cho 'gameStarted')
 socket.on('updateGameState', (data) => {
-    // Hiển thị bàn chơi nếu đây là lần đầu
-    elements.gameBoard.classList.remove('hidden');
-    elements.startGame.style.display = 'none';
-    elements.drawButton.classList.remove('hidden');
-
-    // Gọi hàm xử lý trung tâm
+    // TỐI ƯU: Gộp 2 lệnh kiểm tra 'hidden' làm một
+    const isFirstTime = elements.gameBoard.classList.contains('hidden');
+    if (isFirstTime) {
+        elements.gameBoard.classList.remove('hidden');
+        elements.startGame.style.display = 'none';
+        elements.drawButton.classList.remove('hidden');
+        playSound('shuffle'); // Chỉ phát lần đầu game
+        startElapsedTimeTimer(); // Bắt đầu đếm giờ chơi
+    }
+    
     handleGameStateUpdate(data);
 });
 
@@ -119,8 +209,6 @@ socket.on('dealCards', (cards) => {
     renderHand();
 });
 
-
-
 socket.on('updateCards', (cards) => {
     myCards = cards;
     renderHand();
@@ -128,26 +216,38 @@ socket.on('updateCards', (cards) => {
 
 socket.on('cardDrawn', (card) => {
     myCards.push(card);
-    renderHand();
+    playSound('draw');
+    renderHand(); // Render lại tay bài
+
+    // Animation cho lá bài vừa rút
+    const lastCardEl = elements.playerHand.lastElementChild;
+    if (lastCardEl) {
+        lastCardEl.classList.add('card-draw-animation');
+    }
 });
 
 socket.on('drawCards', (count) => {
     for (let i = 0; i < count; i++) {
         myCards.push({ color: 'back', type: 'back', value: '?' });
+        playSound('draw');
     }
     renderHand();
+
+    // Animation cho các lá bài vừa rút
+    const cardElements = elements.playerHand.children;
+    const numToAnimate = Math.min(count, cardElements.length);
+    for (let i = 0; i < numToAnimate; i++) {
+        cardElements[cardElements.length - 1 - i].classList.add('card-draw-animation');
+    }
     showError(`Bạn bị bắt rút ${count} lá!`);
 });
 
 socket.on('chooseColor', () => elements.colorPicker.classList.remove('hidden'));
 
 socket.on('colorChosen', (color) => {
-    // Thêm một lớp viền màu cho thẻ wild vừa đánh
     const topCard = elements.discardPile.querySelector('.uno-card');
     if (topCard) {
-        // Xóa các lớp viền cũ (nếu có)
         topCard.classList.remove('chosen-red', 'chosen-green', 'chosen-blue', 'chosen-yellow');
-        // Thêm lớp viền mới
         topCard.classList.add(`chosen-${color}`);
     }
     elements.colorPicker.classList.add('hidden');
@@ -160,61 +260,111 @@ socket.on('chatMessage', (msg) => {
     elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
 });
 
-socket.on('gameOver', (winnerName) => {
-    alert(`${winnerName} đã hô UNO và thắng! Ma nhai tán thưởng!`);
-    location.reload();
+socket.on('gameOver', (winnerId, winnerName, allPlayers) => {
+    if (gameTimerInterval) clearInterval(gameTimerInterval);
+    if (visualTimerInterval) clearInterval(visualTimerInterval);
+
+    playSound('win');
+    elements.turnTimer.classList.add('hidden');
+    
+    // FIX: Sửa lỗi 'elements.hand' thành 'elements.playerHand'
+    elements.playerHand.classList.add('hand-disabled'); 
+
+    const results = [];
+    results.push({ name: winnerName, rank: 1, cardCount: 0 });
+
+    const losers = allPlayers.filter(p => p.id !== winnerId);
+    losers.sort((a, b) => a.cardCount - b.cardCount);
+
+    losers.forEach((loser, index) => {
+        results.push({ name: loser.name, rank: index + 2, cardCount: loser.cardCount });
+    });
+
+    elements.resultsList.innerHTML = results.map(player => {
+        const rankEmojis = ['🥇', '🥈', '🥉'];
+        let rankDisplay = (player.rank <= 3) ? rankEmojis[player.rank - 1] : `#${player.rank}`;
+        let cardDisplay = (player.rank === 1) ? 'Chiến thắng!' : `(còn ${player.cardCount} lá)`;
+
+        return `<div class="result-item rank-${player.rank}">
+                    <span class="rank">${rankDisplay}</span>
+                    <span class="name">${player.name}</span>
+                    <span class="status">${cardDisplay}</span>
+                  </div>`;
+    }).join('');
+
+    elements.gameOverModal.classList.remove('hidden');
 });
-/**
- * Lấy đường dẫn ảnh cho một đối tượng thẻ bài.
- * Giả định ảnh nằm trong /images/cards/
- * VÍ DỤ: {color: 'red', type: '1'} -> /images/cards/RED1.png
- * VÍ DỤ: {color: 'wild', type: 'DOIMAU'} -> /images/cards/DOIMAU.png
- */
+
+// === CÁC HÀM RENDER & UTILITY ===
+
 function getCardImageSrc(card) {
     if (card.color === 'back') {
-        return '/images/cards/BACK.png'; // Thẻ úp
+        return '/images/cards/BACK.png';
     }
-    
     if (card.color === 'wild') {
-        // DOIMAU.png, CONGBON.png
         return `/images/cards/${card.type.toUpperCase()}.png`;
     }
-
-    // RED1.png, GREENCONGHAI.png
     const color = card.color.toUpperCase();
     const value = card.value.toUpperCase();
     return `/images/cards/${color}${value}.png`;
 }
-// TẠO LÁ BÀI: ICON SINH ĐỘNG + TOOLTIP FACT KHI HOVER
-// TẠO LÁ BÀI: SỬ DỤNG <img> + TOOLTIP FACT KHI HOVER
+
 function createCardElement(card) {
     const el = document.createElement('div');
-    // Bỏ lớp màu (ví dụ: 'red') vì ảnh đã có màu
     el.className = 'uno-card'; 
     el.dataset.type = card.type;
 
-    // --- TRUNG TÂM: THẺ BÀI BẰNG HÌNH ẢNH ---
     const img = document.createElement('img');
     img.src = getCardImageSrc(card);
     img.alt = `Thẻ ${card.color} ${card.type}`;
     el.appendChild(img);
 
-    // --- TOOLTIP: FACT MA NHAI KHI HOVER (Giữ nguyên) ---
     const tooltip = document.createElement('div');
     tooltip.className = 'fact-tooltip';
-    tooltip.textContent = getRandomFact(); // Fact mới mỗi lần
+    tooltip.textContent = getRandomFact();
     el.appendChild(tooltip);
 
-    // CẬP NHẬT FACT MỖI LẦN HOVER
     el.addEventListener('mouseenter', () => {
         tooltip.textContent = getRandomFact();
     });
 
-    // Click để chơi (chỉ khi thẻ không phải là thẻ úp)
     if (card.color !== 'back') {
-         el.onclick = () => socket.emit('playCard', myCards.indexOf(card));
-    }
+        // FIX: XÓA BỎ LOGIC ONCLICK BỊ LẶP LẠI
+        // Chỉ giữ lại một khối logic 'el.onclick' duy nhất
+        el.onclick = () => {
+            // 1. Kiểm tra LƯỢT CHƠI
+            if (currentTurnId !== socket.id) {
+                playSound('error'); 
+                if (!el.classList.contains('card-shake-animation')) {
+                    el.classList.add('card-shake-animation');
+                    setTimeout(() => el.classList.remove('card-shake-animation'), 500);
+                }
+                return;
+            }
 
+            // 2. Kiểm tra TÍNH HỢP LỆ (đúng luật)
+            if (!canPlayCard(card, currentTopCard)) {
+                playSound('error');
+                if (!el.classList.contains('card-shake-animation')) {
+                    el.classList.add('card-shake-animation');
+                    setTimeout(() => el.classList.remove('card-shake-animation'), 500);
+                }
+                return;
+            }
+
+            // 3. Nếu hợp lệ -> Chạy animation và gửi sự kiện
+            el.classList.add('card-play-animation-out');
+            playSound('play');
+            setTimeout(() => {
+                // TỐI ƯU: Kiểm tra xem lá bài còn trong tay không trước khi gửi
+                // (Tránh lỗi nếu người dùng bấm 2 lần quá nhanh)
+                const cardIndex = myCards.indexOf(card);
+                if(cardIndex > -1) {
+                    socket.emit('playCard', cardIndex);
+                }
+            }, 200);
+        };
+    }
     return el;
 }
 
@@ -222,7 +372,6 @@ function getRandomFact() {
     return memeFacts[Math.floor(Math.random() * memeFacts.length)];
 }
 
-// RENDER
 function renderHand() {
     elements.playerHand.innerHTML = '';
     myCards.forEach(card => {
@@ -232,10 +381,37 @@ function renderHand() {
 
 function renderDiscardTop(card) {
     elements.discardPile.innerHTML = '';
-    elements.discardPile.appendChild(createCardElement(card));
+    // TỐI ƯU: Không cần tạo lá bài đầy đủ ở đây
+    // Chỉ cần 1 element img là đủ, nhẹ hơn cho chồng bài bỏ
+    const el = document.createElement('div');
+    el.className = 'uno-card'; 
+    
+    // Xóa listener 'click' và 'hover' không cần thiết
+    el.addEventListener('mouseenter', () => {
+        tooltip.textContent = getRandomFact();
+    });
+
+    const img = document.createElement('img');
+    img.src = getCardImageSrc(card);
+    img.alt = `Thẻ ${card.color} ${card.type}`;
+    el.appendChild(img);
+
+    // Thêm tooltip
+    const tooltip = document.createElement('div');
+    tooltip.className = 'fact-tooltip';
+    tooltip.textContent = getRandomFact();
+    el.appendChild(tooltip);
+
+    el.classList.add('card-play-animation-in');
+    
+    // Nếu là lá wild, nó phải giữ màu đã chọn
+    if (card.color !== 'wild' && (card.type === 'DOIMAU' || card.type === 'CONGBON')) {
+        el.classList.add(`chosen-${card.color}`);
+    }
+
+    elements.discardPile.appendChild(el);
 }
 
-// SỬA "ĐẾN LƯỢT" - HOẠT ĐỘNG 100%
 function updateTurnIndicator(name) {
     if (name) {
         elements.currentTurn.textContent = `Đến lượt: ${name}`;
@@ -248,10 +424,14 @@ function updateTurnIndicator(name) {
 
 function updateMemeFact(fact) {
     elements.memeFact.textContent = fact || getRandomFact();
-    setTimeout(updateMemeFact, 5000);
+    
+    // TỐI ƯU: Dùng setTimeout đệ quy thay vì setInterval
+    setTimeout(updateMemeFact, 5000); 
 }
 
 function showError(msg) {
+    // TỐI ƯU: Chuyển âm thanh lỗi vào đây
+    playSound('error');
     elements.errorMsg.textContent = msg;
     setTimeout(() => elements.errorMsg.textContent = '', 4000);
 }
@@ -260,12 +440,33 @@ function generateRoomCode() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-// COLOR PICKER
+function canPlayCard(card, topCard) {
+    if (!topCard) return true; 
+    return card.color === topCard.color || 
+           card.value === topCard.value || 
+           card.color === 'wild';
+}
+
+// === KHỞI CHẠY & EVENT LISTENERS ===
+document.getElementById('createRoom').onclick = () => createOrJoinRoom(true);
+document.getElementById('joinRoom').onclick = () => createOrJoinRoom(false);
+elements.startGame.onclick = () => socket.emit('startGame');
+elements.drawButton.onclick = () => socket.emit('drawCard');
+elements.sendChat.onclick = sendChat;
+
+elements.chatInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter') sendChat();
+});
+
 elements.colorPicker.addEventListener('click', (e) => {
     if (e.target.classList.contains('color')) {
         socket.emit('chooseColor', e.target.dataset.color);
     }
 });
 
-// INIT
+elements.closeResultsButton.onclick = () => {
+    location.reload(); 
+};
+
+// Bắt đầu chạy
 updateMemeFact();

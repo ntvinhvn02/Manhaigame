@@ -1,57 +1,4 @@
-/* === RESET & TOÀN CỤC === */
-/* ICON SINH ĐỘNG */
-.card-center {
-    font-size: 2.4rem;
-    font-weight: bold;
-    text-shadow: 0 0 6px rgba(0,0,0,0.5);
-    user-select: none;
-}
-
-.uno-card[data-type="wild"] .card-center,
-.uno-card[data-type="wild4"] .card-center {
-    font-size: 1.8rem;
-}
-
-/* TOOLTIP FACT - HIỆN KHI HOVER */
-.fact-tooltip {
-    position: absolute;
-    bottom: 110px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.92);
-    color: #fff;
-    padding: 10px 16px;
-    border-radius: 12px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: all 0.3s ease;
-    z-index: 100;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
-    border: 1px solid #444;
-    max-width: 240px;
-    text-align: center;
-}
-
-.uno-card:hover .fact-tooltip {
-    opacity: 1;
-    visibility: visible;
-    bottom: 125px;
-}
-
-/* MŨI TÊN DƯỚI TOOLTIP */
-.fact-tooltip::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 8px solid transparent;
-    border-top-color: rgba(0,0,0,0.92);
-}
+/* === 1. RESET & GLOBAL === */
 * {
   margin: 0;
   padding: 0;
@@ -66,7 +13,7 @@ body {
   overflow-x: hidden;
 }
 
-/* === HEADER === */
+/* === 2. LAYOUT & CHUNG === */
 #header {
   text-align: center;
   padding: 20px;
@@ -91,12 +38,6 @@ body {
   animation: pulse 3s infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
-/* === MÀN HÌNH CHUNG === */
 .screen {
   display: flex;
   justify-content: center;
@@ -105,60 +46,6 @@ body {
   padding: 20px;
 }
 
-.card {
-  background: rgba(255,255,255,0.15);
-  padding: 30px;
-  border-radius: 20px;
-  backdrop-filter: blur(15px);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-  text-align: center;
-  width: 100%;
-  max-width: 400px;
-  border: 1px solid rgba(255,255,255,0.2);
-}
-
-input {
-  width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border: none;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.2);
-  color: white;
-  font-size: 1rem;
-}
-
-input::placeholder { color: #ccc; }
-
-.input-group {
-  display: flex;
-  gap: 10px;
-}
-
-.input-group input { flex: 1; }
-
-button {
-  padding: 12px 20px;
-  border: none;
-  border-radius: 10px;
-  background: #ff6b6b;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-button:hover {
-  background: #ff5252;
-  transform: translateY(-2px);
-}
-
-.btn-primary { background: #4ecdc4; }
-.btn-primary:hover { background: #45b7aa; }
-
-.error { color: #ff6b6b; margin-top: 10px; }
-
-/* === PHÒNG === */
 #room {
   display: flex;
   gap: 20px;
@@ -173,6 +60,124 @@ button:hover {
   min-width: 200px;
 }
 
+.game-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* === 3. COMPONENTS (NÚT, FORM, INFO) === */
+
+/* Form & Input */
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  font-size: 1rem;
+}
+input::placeholder { color: #ccc; }
+
+.input-group {
+  display: flex;
+  gap: 10px;
+}
+.input-group input { flex: 1; }
+
+/* Buttons */
+button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  background: #ff6b6b;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+button:hover {
+  background: #ff5252;
+  transform: translateY(-2px);
+}
+
+.btn-primary { background: #4ecdc4; }
+.btn-primary:hover { background: #45b7aa; }
+
+.btn-how-to-play {
+  display: block;
+  width: 100%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  background: #6c5ce7; /* Màu tím */
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+  text-decoration: none;
+  margin-top: 15px;
+  font-size: 1rem;
+}
+.btn-how-to-play:hover {
+  background: #5a4bd7;
+  transform: translateY(-2px);
+}
+
+.btn-back {
+  display: inline-block;
+  padding: 10px 18px;
+  background: #ff6b6b;
+  color: white;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: 0.3s;
+  margin-bottom: 20px;
+}
+.btn-back:hover { background: #ff5252; }
+
+/* Thẻ "Card" chung (dùng cho Lobby & HowToPlay) */
+.card {
+  background: rgba(255,255,255,0.15);
+  padding: 30px;
+  border-radius: 20px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+  text-align: center;
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Info & Error */
+.room-info {
+  text-align: center;
+  margin: 15px 0;
+  padding: 10px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 12px;
+  font-size: 1.1rem;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+#displayRoomCode {
+  font-weight: bold;
+  color: #ffd700;
+  font-size: 1.4rem;
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px #ffd700;
+}
+
+.error { 
+  color: #ff6b6b; 
+  margin-top: 10px; 
+}
+
+/* === 4. PLAYER LIST & SIDEBAR === */
 #playerList {
   list-style: none;
   margin: 15px 0;
@@ -183,16 +188,25 @@ button:hover {
   background: rgba(255,255,255,0.1);
   margin: 5px 0;
   border-radius: 8px;
+  transition: all 0.3s ease;
 }
 
-/* === GAME BOARD === */
-.game-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+#playerList li.player-you {
+  font-weight: bold;
+  border: 1px solid #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
+#playerList li.player-host {
+  color: #ffd700; /* Màu vàng cho chủ phòng */
+}
+
+/* Xóa style .host cũ nếu có */
+#playerList li.host {
+  font-weight: normal; 
+}
+
+/* === 5. GAME BOARD & DECK === */
 #gameBoard {
   background: rgba(0,0,0,0.2);
   padding: 30px;
@@ -200,7 +214,6 @@ button:hover {
   text-align: center;
 }
 
-/* === HIỂN THỊ LƯỢT === */
 #currentTurn {
   background: rgba(255,255,255,0.2);
   padding: 12px 20px;
@@ -214,7 +227,45 @@ button:hover {
   text-shadow: 0 0 8px #ffd700;
 }
 
-/* === DECK AREA === */
+.turn-timer {
+  width: 120px;
+  height: 40px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 20px;
+  margin: 10px auto;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.4);
+  box-shadow: 0 0 10px rgba(0,0,0,0.5) inset;
+}
+
+.timer-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #4ecdc4, #45b7aa);
+  border-radius: 20px 0 0 20px;
+  transition: width 1s linear, background-color 0.5s ease;
+}
+
+.timer-bar.timer-low {
+  background: linear-gradient(90deg, #ff6b6b, #e74c3c);
+  animation: pulse-red 1.5s infinite;
+}
+
+#timerText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 1.4rem;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(0,0,0,0.7);
+}
+
 .deck-area {
   display: flex;
   justify-content: center;
@@ -223,7 +274,6 @@ button:hover {
   margin-bottom: 20px;
 }
 
-/* === NÚT RÚT BÀI === */
 #drawButton {
   padding: 14px 28px;
   font-size: 1.1rem;
@@ -235,16 +285,15 @@ button:hover {
   font-weight: bold;
   transition: 0.3s;
 }
-
 #drawButton:hover {
   background: #d35400;
   transform: scale(1.05);
 }
 
-/* === LÁ BÀI: CHỈ 1 SỐ/KÝ HIỆU Ở GIỮA === */
+/* === 6. UNO CARDS (THẺ BÀI) === */
 .uno-card {
-  width: 150px;
-  height: 200px;
+  width: 160px;  /* Đã sửa lại kích thước hợp lý hơn */
+  height: 210px; /* Giữ tỉ lệ */
   border-radius: 12px;
   border: 3px solid #333;
   margin: 6px;
@@ -252,7 +301,7 @@ button:hover {
   position: relative;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   transition: all 0.3s ease;
-  overflow: hidden; /* Giữ lại để bo góc img */
+  overflow: hidden;
 }
 
 .uno-card:hover {
@@ -260,28 +309,33 @@ button:hover {
   box-shadow: 0 8px 20px rgba(0,0,0,0.4);
 }
 
-/* MÀU NỀN */
-.uno-card.red { background: #e74c3c; color: white; }
-.uno-card.green { background: #27ae60; color: white; }
-.uno-card.blue { background: #3498db; color: white; }
-.uno-card.yellow { background: #f1c40f; color: #333; }
-.uno-card.wild { background: #9b59b6; color: white; }
-
-/* CHỈ 1 KÝ HIỆU Ở GIỮA */
-.card-center {
-  font-size: 2.4rem;
-  font-weight: bold;
-  text-shadow: 0 0 6px rgba(0,0,0,0.4);
-  user-select: none;
+/* Style cho <img> bên trong thẻ */
+.uno-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px; 
 }
 
-/* Wild nhỏ hơn */
-.uno-card[data-type="wild"] .card-center,
-.uno-card[data-type="wild4"] .card-center {
-  font-size: 1.8rem;
+/* Viền màu cho thẻ Wild đã chọn */
+.uno-card.chosen-red {
+  border: 4px solid #e74c3c;
+  box-shadow: 0 0 15px #e74c3c;
+}
+.uno-card.chosen-green {
+  border: 4px solid #27ae60;
+  box-shadow: 0 0 15px #27ae60;
+}
+.uno-card.chosen-blue {
+  border: 4px solid #3498db;
+  box-shadow: 0 0 15px #3498db;
+}
+.uno-card.chosen-yellow {
+  border: 4px solid #f1c40f;
+  box-shadow: 0 0 15px #f1c40f;
 }
 
-/* === TOOLTIP FACT === */
+/* Tooltip trên thẻ bài */
 .fact-tooltip {
   position: absolute;
   bottom: 110px;
@@ -302,10 +356,10 @@ button:hover {
 
 .uno-card:hover .fact-tooltip {
   opacity: 1;
-  bottom: 140px; /* Tăng từ 120px -> 140px */
+  bottom: 140px; /* Cập nhật cho kích thước thẻ 90x128 */
 }
 
-/* === PLAYER HAND === */
+/* Tay bài */
 #playerHand {
   display: flex;
   justify-content: center;
@@ -314,7 +368,23 @@ button:hover {
   min-height: 120px;
 }
 
-/* === CHAT === */
+/* Khi không tới lượt */
+.hand-disabled .uno-card {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.hand-disabled .uno-card:hover {
+  transform: translateY(0) scale(1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.hand-disabled .uno-card:hover .fact-tooltip {
+  opacity: 0;
+  visibility: hidden;
+  bottom: 120px; /* Reset vị trí */
+}
+
+
+/* === 7. CHAT BOX === */
 #chatBox {
   background: rgba(0,0,0,0.3);
   border-radius: 15px;
@@ -345,7 +415,7 @@ button:hover {
 
 .chat-input input { flex: 1; }
 
-/* === MODAL CHỌN MÀU === */
+/* === 8. MODALS (CHỌN MÀU & KẾT QUẢ) === */
 .modal {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -364,6 +434,7 @@ button:hover {
   text-align: center;
 }
 
+/* Modal Chọn Màu */
 .colors {
   display: flex;
   justify-content: center;
@@ -379,64 +450,233 @@ button:hover {
   border: 4px solid #fff;
   box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
-
 .color.red { background: #e74c3c; }
 .color.green { background: #27ae60; }
 .color.blue { background: #3498db; }
 .color.yellow { background: #f1c40f; }
 
-/* === UTILITY === */
-.hidden { display: none !important; }
-
-.room-info {
-  text-align: center;
-  margin: 15px 0;
-  padding: 10px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 12px;
-  font-size: 1.1rem;
-  border: 1px solid rgba(255,255,255,0.3);
-}
-
-#displayRoomCode {
-  font-weight: bold;
+/* Modal Kết Quả Game */
+.results-modal h2 {
   color: #ffd700;
-  font-size: 1.4rem;
-  letter-spacing: 3px;
   text-shadow: 0 0 10px #ffd700;
+  font-size: 2.2rem;
+  margin-bottom: 25px;
 }
 
-/* === RESPONSIVE === */
+#resultsList {
+  margin: 20px 0;
+  width: 100%;
+  text-align: left;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  margin: 8px 0;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+  font-size: 1.2rem;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.result-item .rank {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-right: 15px;
+  width: 45px;
+  text-align: center;
+}
+.result-item .name {
+  flex-grow: 1;
+  font-weight: bold;
+  font-size: 1.3rem;
+}
+.result-item .status {
+  font-size: 1rem;
+  color: #ccc;
+  font-style: italic;
+}
+
+.result-item.rank-1 {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: rgba(255, 215, 0, 0.5);
+}
+.result-item.rank-1 .name { color: #ffd700; }
+
+.result-item.rank-2 {
+  background: rgba(192, 192, 192, 0.2);
+  border-color: rgba(192, 192, 192, 0.5);
+}
+.result-item.rank-2 .name { color: #c0c0c0; }
+
+.result-item.rank-3 {
+  background: rgba(205, 127, 50, 0.2);
+  border-color: rgba(205, 127, 50, 0.5);
+}
+.result-item.rank-3 .name { color: #cd7f32; }
+
+
+/* === 9. "HOW TO PLAY" PAGE === */
+.how-to-play-container {
+  background: rgba(255,255,255,0.15);
+  padding: 30px;
+  border-radius: 20px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+  width: 100%;
+  max-width: 900px; /* Rộng hơn để chứa nội dung */
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+}
+
+.how-to-play-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 2rem;
+  color: #ffd700;
+  text-shadow: 0 0 8px #ffd700;
+}
+
+.how-to-play-container h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  color: #4ecdc4;
+  border-bottom: 1px solid #4ecdc4;
+  padding-bottom: 5px;
+}
+
+.how-to-play-container p, 
+.how-to-play-container li {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.how-to-play-container ul {
+  list-style-position: inside;
+  margin-left: 10px;
+}
+
+.card-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+  justify-items: center;
+}
+
+.card-item {
+  width: 100%;
+  max-width: 180px;
+}
+
+.card-item img {
+  width: 100%;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  transition: 0.3s;
+}
+
+.card-item img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+/* === 10. ANIMATIONS & KEYFRAMES === */
+
+/* Rung (pulse) cho meme fact và timer */
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+@keyframes pulse-red {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Rút bài */
+@keyframes card-draw-fade-in {
+  from {
+    transform: scale(0.5) translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+.card-draw-animation {
+  animation: card-draw-fade-in 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Đánh bài (bay ra) */
+@keyframes card-play-out {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-150px) scale(0.8);
+    opacity: 0;
+  }
+}
+.card-play-animation-out {
+  z-index: 100;
+  animation: card-play-out 0.3s ease-in forwards;
+  pointer-events: none; 
+}
+
+/* Đánh bài (đáp xuống) */
+@keyframes card-play-in {
+  from {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.card-play-animation-in {
+  animation: card-play-in 0.2s ease-out;
+}
+
+/* Lắc bài (lỗi) */
+@keyframes card-shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+.card-shake-animation {
+  transform: translateY(0) !important;
+  animation: card-shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+
+/* === 11. UTILITY & RESPONSIVE === */
+
+/* Utility */
+.hidden { 
+  display: none !important; 
+}
+
+/* Responsive */
 @media (max-width: 768px) {
   #room { flex-direction: column; }
-  .uno-card { width: 75px; height: 106px; }
-  .card-center { font-size: 2rem; }
-  .uno-card[data-type="wild"] .card-center,
-  .uno-card[data-type="wild4"] .card-center { font-size: 1.5rem; }
-}
-/* === THÊM MỚI: ĐỊNH DẠNG CHO THẺ <img> BÊN TRONG === */
-.uno-card img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Đảm bảo ảnh lấp đầy khung */
-  /* Bo góc nhẹ cho ảnh bên trong viền */
-  border-radius: 8px; 
-}
-
-/* === THÊM MỚI: VIỀN HIỂN THỊ MÀU ĐÃ CHỌN CHO THẺ WILD === */
-.uno-card.chosen-red {
-  border: 4px solid #e74c3c;
-  box-shadow: 0 0 15px #e74c3c;
-}
-.uno-card.chosen-green {
-  border: 4px solid #27ae60;
-  box-shadow: 0 0 15px #27ae60;
-}
-.uno-card.chosen-blue {
-  border: 4px solid #3498db;
-  box-shadow: 0 0 15px #3498db;
-}
-.uno-card.chosen-yellow {
-  border: 4px solid #f1c40f;
-  box-shadow: 0 0 15px #f1c40f;
+  
+  /* Giảm kích thước thẻ cho di động */
+  .uno-card { 
+    width: 75px; 
+    height: 106px; 
+  }
+  
+  /* Giảm kích thước thẻ trong thư viện (How To Play) */
+  .card-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+  .card-item {
+    max-width: 120px;
+  }
 }
