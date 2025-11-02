@@ -16,22 +16,26 @@
       <h2>UNO Ma Nhai</h2>
       <input type="text" id="username" placeholder="Tên của bạn" />
       <div class="input-group">
-          <input type="text" id="roomCode" placeholder="Mã phòng" />
-          <button id="createRoom">Tạo Phòng</button>
-          <button id="joinRoom">Tham Gia</button>
-        </div>
-
-        <a href="how.html" class="btn-how-to-play">Cách chơi & Thông Tin</a>
-        <p id="errorMsg" class="error"></p>
+        <input type="text" id="roomCode" placeholder="Mã phòng (Để trống để tạo)" />
+        <button id="createRoom">Tạo Phòng</button>
+        <button id="joinRoom">Tham Gia</button>
       </div>
+
+      <a href="how.html" class="btn-how-to-play">Cách chơi & Thông Tin</a>
       <p id="errorMsg" class="error"></p>
     </div>
-  </div>
+    </div>
 
   <div id="room" class="screen hidden">
     <div class="sidebar">
       <h3>Người chơi</h3>
       <ul id="playerList"></ul>
+      <div id="voiceControls" class="voice-controls hidden">
+        <button id="btnToggleMic" data-muted="true">Bật Mic 🎙️</button>
+        <button id="btnToggleSpeaker" data-muted="false">Tắt Loa 🔇</button>
+      </div>
+      <div id="voiceChatContainer"></div>
+      <div class="room-info">
       <div class="room-info">
         <p><strong>🚪 Mã phòng:</strong> <span id="displayRoomCode"></span></p>
         <p>Chia sẻ mã này để bạn bè tham gia!</p>
@@ -46,7 +50,6 @@
 
     <div class="game-area">
       <div id="gameBoard" class="hidden">
-        <!-- HIỂN THỊ LƯỢT -->
         <div id="currentTurn" class="turn-indicator hidden"></div>
 
         <div id="turnTimer" class="turn-timer hidden">
@@ -84,18 +87,33 @@
   </div>
 
   <div id="gameOverModal" class="modal hidden">
-  <div class="modal-content results-modal">
-    <h2>Kết quả "Ma Nhai"</h2>
+    <div class="modal-content results-modal">
+      <h2>Kết quả "Ma Nhai"</h2>
+      <div id="resultsList"></div>
+      <button id="closeResultsButton" class="btn-primary" style="width: 100%; margin-top: 15px;">
+        Chơi lại
+      </button>
+    </div>
+  </div>
+  
+  <div id="triviaModal" class="modal hidden">
+    <div class="modal-content trivia-modal">
+      <h2>Bạn bị "CẤM"!</h2>
+      <p>Trả lời đúng để thoát. Bạn có 10 giây!</p>
+      
+      <div id="triviaTimerBar" class="trivia-timer-bar"></div>
 
-    <div id="resultsList">
+      <h3 id="triviaQuestion">Câu hỏi sẽ xuất hiện ở đây...</h3>
+
+      <div id="triviaAnswers" class="trivia-answers">
+        <button class="btn-answer" data-index="0">A. Lựa chọn A</button>
+        <button class="btn-answer" data-index="1">B. Lựa chọn B</button>
+        <button class="btn-answer" data-index="2">C. Lựa chọn C</button>
+        <button class="btn-answer" data-index="3">D. Lựa chọn D</button>
       </div>
-
-    <button id="closeResultsButton" class="btn-primary" style="width: 100%; margin-top: 15px;">
-      Chơi lại
-    </button>
+    </div>
   </div>
-  </div>
-  <script src="/socket.io/socket.io.js"></script>
+  
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>

@@ -47,7 +47,15 @@ const elements = {
     gameElapsedTime: document.getElementById('gameElapsedTime'),
     gameOverModal: document.getElementById('gameOverModal'),
     resultsList: document.getElementById('resultsList'),
-    closeResultsButton: document.getElementById('closeResultsButton')
+    closeResultsButton: document.getElementById('closeResultsButton'),
+    triviaModal: document.getElementById('triviaModal'),
+    triviaQuestion: document.getElementById('triviaQuestion'),
+    triviaAnswers: document.getElementById('triviaAnswers'),
+    triviaTimerBar: document.getElementById('triviaTimerBar'),
+    voiceControls: document.getElementById('voiceControls'),
+    btnToggleMic: document.getElementById('btnToggleMic'),
+    btnToggleSpeaker: document.getElementById('btnToggleSpeaker'),
+    voiceChatContainer: document.getElementById('voiceChatContainer')
 };
 
 // === KHỞI TẠO ÂM THANH ===
@@ -92,8 +100,7 @@ function startElapsedTimeTimer() {
     let totalSeconds = 0;
     elements.gameElapsedTime.textContent = '00:00'; 
     
-    // Xóa timer cũ nếu có để tránh chạy song song
-    if (gameTimerInterval) clearInterval(gameTimerInterval);
+    if (gameTimerInterval) clearInterval(gameTimerInterval); // Xóa timer cũ
 
     gameTimerInterval = setInterval(() => {
         totalSeconds++;
@@ -130,6 +137,8 @@ function startVisualTimer(seconds) {
 
 // Xử lý trung tâm cho mọi cập nhật trạng thái game
 function handleGameStateUpdate(data) {
+    hideTriviaModal(); // Luôn ẩn modal trắc nghiệm khi có lượt mới
+    
     // 1. Cập nhật lá bài trên cùng
     if (data.discardTop) {
         renderDiscardTop(data.discardTop);
@@ -158,6 +167,10 @@ function handleGameStateUpdate(data) {
     }
 }
 
+function hideTriviaModal() {
+    elements.triviaModal.classList.add('hidden');
+}
+
 // === SOCKET EVENT HANDLERS ===
 
 socket.on('roomJoined', (data) => {
@@ -170,17 +183,15 @@ socket.on('roomJoined', (data) => {
     elements.startGame.classList.toggle('hidden', !isHost);
 });
 
-// TỐI ƯU: Đã chuyển playSound('error') vào hàm showError
 socket.on('errorMessage', showError); 
 
 socket.on('updatePlayers', (players, hostId) => {
-    currentHostId = hostId; // Lưu lại ai là host
+    currentHostId = hostId;
     elements.playerList.innerHTML = players.map(p => {
-        let hostTag = (p.id === currentHostId) ? ' 👑' : ''; // Emoji vương miện
+        let hostTag = (p.id === currentHostId) ? ' 👑' : '';
         let youTag = (p.id === socket.id) ? ' (Bạn)' : '';
         let liClass = (p.id === socket.id) ? 'player-you' : '';
         if (p.id === currentHostId) liClass += ' player-host';
-
         return `<li class="${liClass}">${p.name}${youTag}${hostTag}</li>`;
     }).join('');
 });
@@ -190,17 +201,21 @@ socket.on('becomeHost', () => {
     elements.startGame.classList.remove('hidden');
 });
 
+// FIX: LỖI LOGIC NGHIÊM TRỌNG NẰM Ở ĐÂY
 socket.on('updateGameState', (data) => {
-    // TỐI ƯU: Gộp 2 lệnh kiểm tra 'hidden' làm một
+    // 1. Kiểm tra xem game board có đang ẩn không
     const isFirstTime = elements.gameBoard.classList.contains('hidden');
+    
+    // 2. Nếu là lần đầu, hiển thị mọi thứ và chạy timer
     if (isFirstTime) {
         elements.gameBoard.classList.remove('hidden');
         elements.startGame.style.display = 'none';
         elements.drawButton.classList.remove('hidden');
-        playSound('shuffle'); // Chỉ phát lần đầu game
-        startElapsedTimeTimer(); // Bắt đầu đếm giờ chơi
+        playSound('shuffle');
+        startElapsedTimeTimer();
     }
     
+    // 3. Luôn luôn gọi hàm xử lý
     handleGameStateUpdate(data);
 });
 
@@ -217,9 +232,7 @@ socket.on('updateCards', (cards) => {
 socket.on('cardDrawn', (card) => {
     myCards.push(card);
     playSound('draw');
-    renderHand(); // Render lại tay bài
-
-    // Animation cho lá bài vừa rút
+    renderHand(); 
     const lastCardEl = elements.playerHand.lastElementChild;
     if (lastCardEl) {
         lastCardEl.classList.add('card-draw-animation');
@@ -232,8 +245,6 @@ socket.on('drawCards', (count) => {
         playSound('draw');
     }
     renderHand();
-
-    // Animation cho các lá bài vừa rút
     const cardElements = elements.playerHand.children;
     const numToAnimate = Math.min(count, cardElements.length);
     for (let i = 0; i < numToAnimate; i++) {
@@ -259,6 +270,25 @@ socket.on('chatMessage', (msg) => {
     elements.chatMessages.appendChild(div);
     elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
 });
+
+// SỰ KIỆN TRẮC NGHIỆM MỚI
+socket.on('showTriviaQuestion', (question, options) => {
+    elements.triviaQuestion.textContent = question;
+    const answerButtons = elements.triviaAnswers.querySelectorAll('.btn-answer');
+    
+    options.forEach((option, index) => {
+      if (answerButtons[index]) {
+        answerButtons[index].textContent = option;
+      }
+    });
+    
+    elements.triviaModal.classList.remove('hidden');
+    elements.triviaTimerBar.style.animation = 'none'; // Reset animation
+    elements.triviaTimerBar.offsetHeight; // Kích hoạt reflow
+    elements.triviaTimerBar.style.animation = 'shrink 10s linear forwards';
+});
+
+socket.on('hideTriviaQuestion', hideTriviaModal);
 
 socket.on('gameOver', (winnerId, winnerName, allPlayers) => {
     if (gameTimerInterval) clearInterval(gameTimerInterval);
@@ -298,12 +328,8 @@ socket.on('gameOver', (winnerId, winnerName, allPlayers) => {
 // === CÁC HÀM RENDER & UTILITY ===
 
 function getCardImageSrc(card) {
-    if (card.color === 'back') {
-        return '/images/cards/BACK.png';
-    }
-    if (card.color === 'wild') {
-        return `/images/cards/${card.type.toUpperCase()}.png`;
-    }
+    if (card.color === 'back') return '/images/cards/BACK.png';
+    if (card.color === 'wild') return `/images/cards/${card.type.toUpperCase()}.png`;
     const color = card.color.toUpperCase();
     const value = card.value.toUpperCase();
     return `/images/cards/${color}${value}.png`;
@@ -314,6 +340,7 @@ function createCardElement(card) {
     el.className = 'uno-card'; 
     el.dataset.type = card.type;
 
+    // ... (code tạo img và tooltip) ...
     const img = document.createElement('img');
     img.src = getCardImageSrc(card);
     img.alt = `Thẻ ${card.color} ${card.type}`;
@@ -328,36 +355,33 @@ function createCardElement(card) {
         tooltip.textContent = getRandomFact();
     });
 
+
     if (card.color !== 'back') {
-        // FIX: XÓA BỎ LOGIC ONCLICK BỊ LẶP LẠI
-        // Chỉ giữ lại một khối logic 'el.onclick' duy nhất
         el.onclick = () => {
-            // 1. Kiểm tra LƯỢT CHƠI
+            // 1. KIỂM TRA LƯỢT CHƠI
             if (currentTurnId !== socket.id) {
                 playSound('error'); 
                 if (!el.classList.contains('card-shake-animation')) {
                     el.classList.add('card-shake-animation');
                     setTimeout(() => el.classList.remove('card-shake-animation'), 500);
                 }
-                return;
+                return; // Dừng lại
             }
 
-            // 2. Kiểm tra TÍNH HỢP LỆ (đúng luật)
+            // 2. KIỂM TRA TÍNH HỢP LỆ (ĐÂY LÀ PHẦN FIX LỖI CỦA BẠN)
             if (!canPlayCard(card, currentTopCard)) {
-                playSound('error');
+                playSound('error'); // Báo lỗi
                 if (!el.classList.contains('card-shake-animation')) {
-                    el.classList.add('card-shake-animation');
+                    el.classList.add('card-shake-animation'); // Rung
                     setTimeout(() => el.classList.remove('card-shake-animation'), 500);
                 }
-                return;
+                return; // Dừng lại! Nước đi không hợp lệ!
             }
 
-            // 3. Nếu hợp lệ -> Chạy animation và gửi sự kiện
+            // 3. NẾU HỢP LỆ MỚI CHẠY ANIMATION VÀ GỬI
             el.classList.add('card-play-animation-out');
             playSound('play');
             setTimeout(() => {
-                // TỐI ƯU: Kiểm tra xem lá bài còn trong tay không trước khi gửi
-                // (Tránh lỗi nếu người dùng bấm 2 lần quá nhanh)
                 const cardIndex = myCards.indexOf(card);
                 if(cardIndex > -1) {
                     socket.emit('playCard', cardIndex);
@@ -381,30 +405,26 @@ function renderHand() {
 
 function renderDiscardTop(card) {
     elements.discardPile.innerHTML = '';
-    // TỐI ƯU: Không cần tạo lá bài đầy đủ ở đây
-    // Chỉ cần 1 element img là đủ, nhẹ hơn cho chồng bài bỏ
     const el = document.createElement('div');
     el.className = 'uno-card'; 
     
-    // Xóa listener 'click' và 'hover' không cần thiết
-    el.addEventListener('mouseenter', () => {
-        tooltip.textContent = getRandomFact();
-    });
-
     const img = document.createElement('img');
     img.src = getCardImageSrc(card);
     img.alt = `Thẻ ${card.color} ${card.type}`;
     el.appendChild(img);
 
-    // Thêm tooltip
     const tooltip = document.createElement('div');
     tooltip.className = 'fact-tooltip';
     tooltip.textContent = getRandomFact();
     el.appendChild(tooltip);
+    
+    el.addEventListener('mouseenter', () => { // Thêm lại sự kiện hover cho lá bài trên cùng
+        tooltip.textContent = getRandomFact();
+    });
 
     el.classList.add('card-play-animation-in');
     
-    // Nếu là lá wild, nó phải giữ màu đã chọn
+    // Giữ viền màu nếu là lá wild đã chọn màu
     if (card.color !== 'wild' && (card.type === 'DOIMAU' || card.type === 'CONGBON')) {
         el.classList.add(`chosen-${card.color}`);
     }
@@ -424,13 +444,10 @@ function updateTurnIndicator(name) {
 
 function updateMemeFact(fact) {
     elements.memeFact.textContent = fact || getRandomFact();
-    
-    // TỐI ƯU: Dùng setTimeout đệ quy thay vì setInterval
     setTimeout(updateMemeFact, 5000); 
 }
 
 function showError(msg) {
-    // TỐI ƯU: Chuyển âm thanh lỗi vào đây
     playSound('error');
     elements.errorMsg.textContent = msg;
     setTimeout(() => elements.errorMsg.textContent = '', 4000);
@@ -461,6 +478,14 @@ elements.chatInput.addEventListener('keypress', e => {
 elements.colorPicker.addEventListener('click', (e) => {
     if (e.target.classList.contains('color')) {
         socket.emit('chooseColor', e.target.dataset.color);
+    }
+});
+
+elements.triviaAnswers.addEventListener('click', (e) => {
+    if (e.target.classList.contains('btn-answer')) {
+      const answerIndex = parseInt(e.target.dataset.index, 10);
+      socket.emit('submitTriviaAnswer', answerIndex);
+      hideTriviaModal(); 
     }
 });
 

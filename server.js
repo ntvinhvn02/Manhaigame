@@ -28,10 +28,34 @@ const memeFacts = [
   "Ma nhai thắng khi bạn hô UNO muộn!"
 ];
 
+// === THÊM MỚI: KHO CÂU HỎI TRẮC NGHIỆM ===
+const triviaQuestions = [
+  {
+    q: "Ma nhai tại Ngũ Hành Sơn chủ yếu được khắc bằng ngôn ngữ gì?",
+    o: ["A. Chữ Hán và Chữ Nôm", "B. Chữ Quốc Ngữ", "C. Chữ Hán và Chữ Thái", "D. Chỉ Chữ Nôm"],
+    a: 0 // Đáp án A (index 0)
+  },
+  {
+    q: "Động nào tại Ngũ Hành Sơn có nhiều ma nhai nhất?",
+    o: ["A. Động Hoa Nghiêm", "B. Động Huyền Không", "C. Động Tàng Chơn", "D. Động Âm Phủ"],
+    a: 1 // Đáp án B
+  },
+  {
+    q: "Bia 'Phổ Đà sơn Linh trung Phật' (cổ nhất) có từ năm nào?",
+    o: ["A. 1955", "B. 1820", "C. 1640", "D. 1776"],
+    a: 2 // Đáp án C
+  },
+  {
+    q: "Có tổng cộng bao nhiêu tư liệu ma nhai được phát hiện tại Ngũ Hành Sơn?",
+    o: ["A. 20", "B. 78", "C. 55", "D. 102"],
+    a: 1 // Đáp án B
+  }
+];
+// === HẾT THÊM MỚI ===
 function createDeck() {
   const colors = ['red', 'green', 'blue', 'yellow'];
   const numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']; // FIX: Đã thêm số '0'
-  const actions = ['CONGHAI', 'CAM'];
+  const actions = ['CONGHAI', 'CAM', 'CHUYENLUOT']; // Thêm 'CHUYỂN LƯỢT'
   const deck = [];
 
   colors.forEach(color => {
@@ -46,11 +70,12 @@ function createDeck() {
     actions.forEach(action => {
       deck.push({ color, type: action, value: action });
       deck.push({ color, type: action, value: action });
+      deck.push({ color, type: action, value: action });
     });
   });
 
   // Thẻ đặc biệt (Wild cards)
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     deck.push({ color: 'wild', type: 'DOIMAU', value: 'DOIMAU' });
     deck.push({ color: 'wild', type: 'CONGBON', value: 'CONGBON' });
   }
@@ -118,11 +143,81 @@ function startTurnTimer(room) {
     }
   }, turnDuration);
 }
+// === THÊM MỚI: HÀM XỬ LÝ KHI TRẢ LỜI TRẮC NGHIỆM ===
+function handleTriviaAnswer(room, playerId, wasCorrect) {
+  if (!room || !room.pendingTrivia || room.pendingTrivia.player !== playerId) {
+    return; // Đã quá muộn hoặc không hợp lệ
+  }
 
+  // Xóa timer trắc nghiệm
+  if (room.triviaTimer) clearTimeout(room.triviaTimer);
+  room.pendingTrivia = null; // Xóa trạng thái chờ
+
+  let nextTurnIndex = room.players.findIndex(p => p.id === playerId);
+  if (nextTurnIndex === -1) return; // Người chơi đã thoát
+
+  if (wasCorrect) {
+    // TRẢ LỜI ĐÚNG: Không bị cấm, vẫn là lượt của họ
+    io.to(room.roomCode).emit('chatMessage', { 
+      user: '👻 Ma Nhai', 
+      msg: `${room.players[nextTurnIndex].name} đã trả lời đúng và không bị cấm lượt!` 
+    });
+    room.currentTurn = nextTurnIndex; // Lượt không đổi
+  } else {
+    // TRẢ LỜI SAI: Bị cấm lượt
+    io.to(room.roomCode).emit('chatMessage', { 
+      user: '👻 Ma Nhai', 
+      msg: `${room.players[nextTurnIndex].name} đã trả lời sai và bị cấm lượt!` 
+    });
+    // Chuyển lượt (skip họ)
+    room.currentTurn = (nextTurnIndex + room.direction + room.players.length) % room.players.length;
+  }
+
+  // Ẩn modal trắc nghiệm ở client
+  io.to(room.roomCode).emit('hideTriviaQuestion');
+
+  // Cập nhật game và bắt đầu timer cho lượt (mới hoặc cũ)
+  io.to(room.roomCode).emit('updateGameState', {
+    players: room.players.map(p => ({ id: p.id, name: p.name, cardCount: p.cards.length })),
+    discardTop: room.discardPile[room.discardPile.length - 1],
+    currentTurn: room.players[room.currentTurn].id,
+    direction: room.direction
+  });
+  startTurnTimer(room); // Khởi động lại timer 30s
+}
 
 io.on('connection', (socket) => {
   console.log('👻 User connected:', socket.id);
+  // === THÊM MỚI: LOGIC TÍN HIỆU (SIGNALING) CHO WEBRTC ===
 
+  // Khi người dùng tham gia phòng và sẵn sàng cho voice
+  socket.on('join-voice', () => {
+    const room = rooms[socket.roomCode];
+    if (room) {
+      // Thông báo cho những người khác trong phòng
+      socket.to(socket.roomCode).emit('user-joined-voice', socket.id);
+    }
+  });
+
+  // Chuyển tiếp lời mời (offer)
+  socket.on('webrtc-offer', (payload) => {
+    io.to(payload.target).emit('webrtc-offer', socket.id, payload.offer);
+  });
+
+  // Chuyển tiếp câu trả lời (answer)
+  socket.on('webrtc-answer', (payload) => {
+    io.to(payload.target).emit('webrtc-answer', socket.id, payload.answer);
+  });
+
+  // Chuyển tiếp thông tin mạng (ICE candidate)
+  socket.on('webrtc-candidate', (payload) => {
+    io.to(payload.target).emit('webrtc-candidate', socket.id, payload.candidate);
+  });
+
+  // Xử lý khi người dùng thoát (từ sự kiện 'disconnect' có sẵn)
+  // Cần thêm vào trong hàm socket.on('disconnect', ...)
+  // ...
+  // === KẾT THÚC LOGIC TÍN HIỆU ===
   // TẠO PHÒNG
   socket.on('createRoom', (roomCode, username) => {
     if (!username) return socket.emit('errorMessage', 'Nhập tên người chơi!');
@@ -144,7 +239,9 @@ io.on('connection', (socket) => {
       chat: [],
       colorChoice: null,
       pendingDraw: 0,
-      turnTimer: null
+      turnTimer: null,
+      triviaTimer: null, // Timer 10s cho câu hỏi
+      pendingTrivia: null // Lưu { player, answer }
     };
 
     socket.join(roomCode);
@@ -246,31 +343,88 @@ io.on('connection', (socket) => {
       
       // XỬ LÝ HIỆU ỨNG
       switch (card.type) {
-        case 'CAM': 
-          nextTurn = (nextTurn + room.direction + room.players.length) % room.players.length;
+
+        case 'CHUYENLUOT': // THẺ CHUYỂN LƯỢT (REVERSE)
+          room.direction *= -1;
+          // nextTurn đã được tính ở trên, nhưng ta cần tính lại sau khi đổi hướng
+          nextTurn = (room.currentTurn + room.direction + room.players.length) % room.players.length;
           break;
+
+        case 'CAM': // THẺ CẤM (TRIVIA MỚI)
+          // 1. Dừng đồng hồ 30s
+          if (room.turnTimer) clearTimeout(room.turnTimer);
+
+          // 2. Lấy người chơi mục tiêu và câu hỏi
+          const targetPlayer = room.players[nextTurn];
+          const trivia = triviaQuestions[Math.floor(Math.random() * triviaQuestions.length)];
+
+          // 3. Lưu lại trạng thái chờ
+          room.pendingTrivia = { 
+            player: targetPlayer.id, 
+            answer: trivia.a 
+          };
+
+          // 4. Gửi câu hỏi CHỈ cho người chơi đó
+          io.to(targetPlayer.id).emit('showTriviaQuestion', trivia.q, trivia.o);
+
+          // 5. Bắt đầu 10 giây đếm ngược (server-side)
+          room.triviaTimer = setTimeout(() => {
+            // Hết 10 giây, tự động xử lý là SAI
+            handleTriviaAnswer(room, targetPlayer.id, false); 
+          }, 10000); // 10 giây
+
+          // QUAN TRỌNG: Không chuyển lượt, không update game.
+          // Trò chơi sẽ "dừng" cho đến khi 'submitTriviaAnswer' được gọi
+          return; // Thoát khỏi hàm 'playCard' ngay lập tức
+
         case 'CONGHAI':
           const draw2Player = room.players[nextTurn];
-          if (draw2Player) { // Đảm bảo người chơi tồn tại
+          if (draw2Player) {
             for (let i = 0; i < 2; i++) draw2Player.cards.push(room.deck.pop());
             io.to(draw2Player.id).emit('drawCards', 2);
           }
           nextTurn = (nextTurn + room.direction + room.players.length) % room.players.length;
           break;
+
         case 'CONGBON':
           const draw4Player = room.players[nextTurn];
-          if (draw4Player) { // Đảm bảo người chơi tồn tại
+          if (draw4Player) {
             for (let i = 0; i < 4; i++) draw4Player.cards.push(room.deck.pop());
             io.to(draw4Player.id).emit('drawCards', 4);
           }
           nextTurn = (nextTurn + room.direction + room.players.length) % room.players.length;
           socket.emit('chooseColor');
           break;
+
         case 'DOIMAU':
           socket.emit('chooseColor');
           break;
       }
 
+      // -----------------------------------------------------------------
+      // PHẦN NÀY CHỈ CHẠY CHO CÁC THẺ BÌNH THƯỜNG (không phải thẻ CAM)
+      // -----------------------------------------------------------------
+      room.currentTurn = nextTurn;
+
+      // KIỂM TRA THẮNG
+      if (player.cards.length === 0) {
+        io.to(room.roomCode).emit('gameOver', player.id, player.name, room.players.map(p => ({ id: p.id, name: p.name, cardCount: p.cards.length })));
+        if (room.turnTimer) clearTimeout(room.turnTimer); // Dừng timer
+        return; // Game kết thúc
+      }
+
+      // GỬI LÁ BÀI CẬP NHẬT
+      io.to(socket.id).emit('updateCards', player.cards);
+
+      // Gửi trạng thái game MỚI
+      io.to(room.roomCode).emit('updateGameState', {
+          players: room.players.map(p => ({ id: p.id, name: p.name, cardCount: p.cards.length })),
+          discardTop: card,
+          currentTurn: room.players[room.currentTurn].id,
+          direction: room.direction
+      });
+
+      startTurnTimer(room); // Bắt đầu đếm giờ
       room.currentTurn = nextTurn;
 
       // KIỂM TRA THẮNG
@@ -317,7 +471,17 @@ io.on('connection', (socket) => {
       }
     }
   });
+  // === THÊM MỚI: LẮNG NGHE CÂU TRẢ LỜI TRẮC NGHIỆM ===
+  socket.on('submitTriviaAnswer', (answerIndex) => {
+    const room = rooms[socket.roomCode];
+    if (!room || !room.pendingTrivia || socket.id !== room.pendingTrivia.player) {
+      return; // Không phải lượt của bạn hoặc không có câu hỏi
+    }
 
+    // Kiểm tra đáp án
+    const wasCorrect = (answerIndex === room.pendingTrivia.answer);
+    handleTriviaAnswer(room, socket.id, wasCorrect);
+  });
   // BÁN LÁ
   socket.on('drawCard', () => {
     const room = rooms[socket.roomCode];
